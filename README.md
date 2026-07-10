@@ -93,7 +93,7 @@ The event is immediately visible on the homepage.
 
 ## API Documentation
 
-Import [`docs/EventHub.postman_collection.json`](docs/EventHub.postman_collection.json) into Postman.
+Import [`eventhub/docs/EventHub.postman_collection.json`](docs/EventHub.postman_collection.json) into Postman.
 
 The collection includes:
 - Pre-request scripts that auto-store the Bearer token after login
