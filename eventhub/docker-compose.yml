@@ -1,0 +1,137 @@
+services:
+  # ─── Databases ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: eventhub
+      POSTGRES_PASSWORD: eventhub_password
+      POSTGRES_MULTIPLE_DATABASES: eventhub_core,eventhub_payment,eventhub_notification
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventhub -d eventhub_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Message Broker ───────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: eventhub
+      RABBITMQ_DEFAULT_PASS: eventhub_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── Core API (Laravel 11) ────────────────────────────────────────────────────
+  core-api:
+    build:
+      context: ./apps/core-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: local
+      SANCTUM_STATEFUL_DOMAINS: ""
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: eventhub_core
+      DB_USERNAME: eventhub
+      DB_PASSWORD: eventhub_password
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: eventhub
+      RABBITMQ_PASSWORD: eventhub_password
+      PAYMENT_SERVICE_URL: http://payment-service:3001
+      PAYMENT_SERVICE_TOKEN: payment-service-secret-token
+      PAYMENT_WEBHOOK_SECRET: webhook-hmac-secret
+      QUEUE_CONNECTION: database
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─── Payment Service (Node.js 20 + Fastify) ───────────────────────────────────
+  payment-service:
+    build:
+      context: ./apps/payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      PAYMENT_SERVICE_PORT: "3001"
+      PAYMENT_SERVICE_TOKEN: payment-service-secret-token
+      CORE_API_WEBHOOK_URL: http://core-api:8000/api/v1/webhooks/payments
+      CORE_API_WEBHOOK_SECRET: webhook-hmac-secret
+      DATABASE_URL: postgresql://eventhub:eventhub_password@postgres:5432/eventhub_payment
+      STRIPE_SUCCESS_RATE: "0.9"
+      STRIPE_CALLBACK_DELAY_MS: "3000"
+      PAYPAL_SUCCESS_RATE: "0.85"
+      PAYPAL_CALLBACK_DELAY_MS: "5000"
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ─── Notification Service (Node.js 20) ────────────────────────────────────────
+  notification-service:
+    build:
+      context: ./apps/notification-service
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://eventhub:eventhub_password@rabbitmq:5672
+      NOTIFICATION_QUEUE: eventhub.notifications
+      DEAD_LETTER_QUEUE: eventhub.notifications.dead_letter
+      DATABASE_URL: postgresql://eventhub:eventhub_password@postgres:5432/eventhub_notification
+      MAX_RETRY_ATTEMPTS: "5"
+      RETRY_BACKOFF_BASE_MS: "1000"
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ─── Web (Next.js 14) ─────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    depends_on:
+      - core-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

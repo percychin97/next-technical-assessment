@@ -1,0 +1,424 @@
+{
+  "info": {
+    "_postman_id": "eventhub-api-v1",
+    "name": "EventHub API",
+    "description": "Complete API collection for the EventHub ticketing platform.\n\nSetup:\n1. Set the `baseUrl` variable to `http://localhost:8000/api/v1`\n2. Run 'Login as Attendee' (or Admin/Vendor) to auto-set the `token` variable\n3. All subsequent requests will use that Bearer token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",  "value": "http://localhost:8000/api/v1" },
+    { "key": "token",    "value": "" },
+    { "key": "orderId",  "value": "" },
+    { "key": "eventId",  "value": "" },
+    { "key": "refundId", "value": "" },
+    { "key": "payoutId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@eventhub.dev\",\"password\":\"password\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Login as Vendor",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"vendor@eventhub.dev\",\"password\":\"password\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Login as Attendee",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.token) pm.collectionVariables.set('token', json.data.token);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"attendee@eventhub.dev\",\"password\":\"password\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events (Public)",
+      "item": [
+        {
+          "name": "List Published Events",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.data && json.data.data.length > 0) {",
+              "  pm.collectionVariables.set('eventId', json.data.data[0].id);",
+              "}"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/events?per_page=10",
+              "query": [{ "key": "per_page", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Get Event Details",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/events/{{eventId}}"
+          }
+        },
+        {
+          "name": "List Ticket Types for Event",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/events/{{eventId}}/ticket-types"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders & Payments (Attendee)",
+      "item": [
+        {
+          "name": "Create Order (Reserve Tickets)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.id) pm.collectionVariables.set('orderId', json.data.id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": \"{{eventId}}\",\n  \"items\": [\n    {\n      \"ticket_type_id\": \"<ticket-type-id-from-list>\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Initiate Payment (Demo Checkout)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/payments",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders"
+          }
+        },
+        {
+          "name": "Get Refund Policy for Order",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}/refund-policy"
+          }
+        },
+        {
+          "name": "Request Refund",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.id) pm.collectionVariables.set('refundId', json.data.id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/refund-request",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"Unable to attend due to travel constraints.\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor",
+      "item": [
+        {
+          "name": "List My Events",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.data && json.data.data.length > 0) {",
+              "  pm.collectionVariables.set('eventId', json.data.data[0].id);",
+              "}"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/vendor/events"
+          }
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Demo Event\",\n  \"description\": \"A demonstration event created via Postman.\",\n  \"start_at_utc\": \"2025-12-01T09:00:00Z\",\n  \"end_at_utc\": \"2025-12-01T17:00:00Z\",\n  \"display_timezone\": \"Asia/Kuala_Lumpur\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Add Inventory Pool",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/events/{{eventId}}/inventory-pools",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Admission Pool\",\n  \"capacity_units\": 200\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Add Ticket Type",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/events/{{eventId}}/ticket-types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventory_pool_id\": \"<pool-id>\",\n  \"code\": \"GA\",\n  \"name\": \"General Admission\",\n  \"category\": \"general_admission\",\n  \"price_minor\": 10000,\n  \"currency\": \"MYR\",\n  \"admission_units_per_purchase\": 1,\n  \"is_active\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Publish Event",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/events/{{eventId}}/publish",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "List My Payouts",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.length > 0) pm.collectionVariables.set('payoutId', json.data[0].id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/vendor/payouts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List All Vendors",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/vendors"
+          }
+        },
+        {
+          "name": "Approve Vendor",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/vendors/<vendor-id>/approve",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Reject Vendor",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/vendors/<vendor-id>/reject",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"Incomplete documentation.\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "List Refund Requests",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.length > 0) pm.collectionVariables.set('refundId', json.data[0].id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/refund-requests"
+          }
+        },
+        {
+          "name": "Approve Refund",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/refund-requests/{{refundId}}/approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"approved_amount_minor\": 5000}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Deny Refund",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/refund-requests/{{refundId}}/deny",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"Outside the refund window.\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Preview Payout",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/payouts/preview?vendor_id=<vendor-id>&period_start=2024-01-01&period_end=2024-01-31",
+              "query": [
+                { "key": "vendor_id", "value": "<vendor-id>" },
+                { "key": "period_start", "value": "2024-01-01" },
+                { "key": "period_end", "value": "2024-01-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Payout",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "if (json.data && json.data.id) pm.collectionVariables.set('payoutId', json.data.id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payouts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor_id\": \"<vendor-id>\",\n  \"period_start\": \"2024-01-01\",\n  \"period_end\": \"2024-01-31\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Approve Payout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/payouts/{{payoutId}}/approve",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "List All Payouts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/payouts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "http://localhost:8000/health"
+          }
+        }
+      ]
+    }
+  ]
+}
