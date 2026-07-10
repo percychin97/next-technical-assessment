@@ -1,0 +1,45 @@
+.loginContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 8rem);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+}
+
+.loginHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.loginHeader h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.fastLogin {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.fastLogin h3 {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.fastLoginButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fastLoginButtons button {
+  width: 100%;
+  justify-content: space-between;
+}
