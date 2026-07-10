@@ -193,5 +193,4 @@ eventhub/
 ---
 
 ## Video Walkthrough
-
-> [Link TBD — see Step 16]
+https://drive.google.com/file/d/1jS8fxvuVYgGe_SHk4WhNNIzs0PDYMD4G/view?usp=drive_link
